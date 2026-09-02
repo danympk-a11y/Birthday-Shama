@@ -1,0 +1,386 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover, maximum-scale=1" />
+  <meta name="theme-color" content="#0b0614" />
+  <meta name="description" content="A private birthday surprise, made just for you." />
+  <meta name="robots" content="noindex, nofollow" />
+  <title>A Birthday Surprise, Just For You</title>
+
+  <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'%3E%3Ctext y='.9em' font-size='90'%3E%E2%9D%A4%EF%B8%8F%3C/text%3E%3C/svg%3E" />
+
+  <!-- Fonts: Poppins (display), Manrope (body/UI), Caveat (soft signature
+       accent) — all clean, simple, easy-reading typefaces. -->
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link
+    href="https://fonts.googleapis.com/css2?family=Poppins:wght@400;500;600;700&family=Manrope:wght@400;500;700;800&family=Caveat:wght@400;500;600&display=swap"
+    rel="stylesheet"
+  />
+
+  <link rel="stylesheet" href="style.css" />
+</head>
+<body>
+
+  <noscript>
+    <div style="padding:2rem;font-family:sans-serif;background:#1c0f2e;color:#f8f2ff;text-align:center;">
+      This birthday surprise needs JavaScript turned on to work. Please enable it in your browser settings.
+    </div>
+  </noscript>
+
+  <div id="app">
+
+    <!-- Ambient animated backdrop, sits behind everything -->
+    <div id="ambient-bg" aria-hidden="true">
+      <div class="stars"></div>
+    </div>
+
+    <!-- Full-viewport canvas shared by every confetti/sparkle/firework moment -->
+    <canvas id="particle-canvas" aria-hidden="true"></canvas>
+
+    <!-- Signature progress element: the glowing Memory Thread -->
+    <nav id="memory-thread" aria-label="Surprise progress">
+      <span id="thread-progress-label" aria-live="polite"></span>
+      <div class="thread-line" aria-hidden="true"></div>
+      <!-- individual .thread-dot spans are injected by js/sectionManager.js -->
+    </nav>
+
+    <!-- Persistent music control -->
+    <button id="music-toggle" class="icon-btn" type="button" aria-pressed="false" aria-label="Play background music">
+      🎵
+    </button>
+
+    <!-- Persistent daily-memories access: reachable from any chapter, at
+         any time, even long after the countdown itself is finished —
+         shown by js/dailyReveal.js only once there's something to see. -->
+    <button id="daily-memories-toggle" class="icon-btn daily-memories-toggle" type="button" aria-label="View daily memories" hidden>
+      🗓️<span class="daily-toggle-badge" id="daily-toggle-badge" aria-hidden="true"></span>
+    </button>
+
+    <main id="section-container">
+
+      <!-- ================================================================
+           CHAPTER 1 — Intro
+           Full-bleed, no card, deliberately quiet and mysterious before
+           the reveal. Text is staggered in with animation-delay.
+      ================================================================= -->
+      <section class="stage story-section intro-stage" data-story-section="intro" aria-hidden="false">
+        <div class="intro-content">
+          <p class="eyebrow anim-fade-in" id="intro-eyebrow" style="animation-delay:.15s"></p>
+          <h1 class="font-display intro-greeting anim-slide-up" style="animation-delay:.4s" tabindex="-1">
+            Hey <span id="intro-name" class="font-script">friend</span> <span aria-hidden="true">❤️</span>
+          </h1>
+          <p id="intro-line" class="intro-subline anim-slide-up" style="animation-delay:1s"></p>
+          <button id="open-surprise-btn" class="btn btn-glow anim-scale-in" style="animation-delay:1.6s" type="button" data-sfx="open">
+            Open Your Surprise 🎁
+          </button>
+        </div>
+      </section>
+
+      <!-- ================================================================
+           CHAPTER 2 — Countdown
+      ================================================================= -->
+      <section class="stage story-section" data-story-section="countdown" aria-hidden="true">
+        <div class="glass-card" id="countdown-card">
+          <p class="eyebrow" id="countdown-eyebrow" tabindex="-1">Something Special Is Coming...</p>
+
+          <div class="countdown-grid" id="countdown-grid" aria-hidden="true">
+            <div class="countdown-tile">
+              <span class="countdown-value" id="cd-days">00</span>
+              <span class="countdown-label">Days</span>
+            </div>
+            <div class="countdown-tile">
+              <span class="countdown-value" id="cd-hours">00</span>
+              <span class="countdown-label">Hours</span>
+            </div>
+            <div class="countdown-tile">
+              <span class="countdown-value" id="cd-minutes">00</span>
+              <span class="countdown-label">Minutes</span>
+            </div>
+            <div class="countdown-tile">
+              <span class="countdown-value" id="cd-seconds">00</span>
+              <span class="countdown-label">Seconds</span>
+            </div>
+          </div>
+          <p class="visually-hidden" id="countdown-summary" aria-live="polite"></p>
+
+          <!-- Daily countdown calendar teaser: hidden entirely if
+               dailyReveal.enabled is false in config.js, or there's
+               nothing valid to schedule. The actual calendar grid lives
+               in the always-reachable #daily-memories-overlay below, so
+               it's never lost once this chapter is behind her. -->
+          <div class="daily-calendar-teaser" id="daily-calendar-teaser" hidden>
+            <p class="eyebrow" id="daily-calendar-eyebrow" tabindex="-1"></p>
+            <h3 class="font-display daily-calendar-heading" id="daily-calendar-heading"></h3>
+            <button type="button" class="btn btn-ghost" id="daily-calendar-open-btn" data-sfx="click"></button>
+          </div>
+
+          <div id="countdown-complete" class="hidden">
+            <p class="font-script celebration-title">It's here ✨</p>
+            <button id="countdown-continue-btn" class="btn btn-glow" type="button">Continue →</button>
+          </div>
+        </div>
+      </section>
+
+      <!-- ================================================================
+           CHAPTER 3 — Photo Reveal
+           A single, cinematic photo (photos[0] from config.js) hidden
+           behind blur until tapped, then revealed with a soft zoom +
+           particles. Card-less, like the intro, to feel intimate rather
+           than boxed-in.
+      ================================================================= -->
+      <section class="stage story-section" data-story-section="photo-reveal" aria-hidden="true">
+        <div class="reveal-content">
+          <p class="eyebrow" id="photo-reveal-eyebrow" tabindex="-1"></p>
+          <h2 class="font-display reveal-question" id="reveal-question"></h2>
+
+          <button type="button" id="reveal-frame" class="reveal-frame" aria-label="Tap to reveal the photo">
+            <img id="reveal-photo" src="" alt="" data-fallback />
+            <span class="reveal-hint" id="reveal-hint" aria-hidden="true"></span>
+          </button>
+
+          <button id="reveal-continue-btn" class="btn btn-glow hidden" type="button">Continue →</button>
+        </div>
+      </section>
+
+      <!-- ================================================================
+           CHAPTER 4 — Memory Gallery
+           Polaroid-style cards built dynamically from config.photos, so
+           the grid always matches however many photos are listed.
+      ================================================================= -->
+      <section class="stage story-section" data-story-section="gallery" aria-hidden="true">
+        <div class="gallery-content">
+          <p class="eyebrow" id="gallery-eyebrow" tabindex="-1"></p>
+          <h2 class="font-display" id="gallery-heading"></h2>
+          <div class="polaroid-grid" id="polaroid-grid"><!-- polaroid cards injected by script.js --></div>
+          <button id="gallery-continue-btn" class="btn btn-glow" type="button">Continue →</button>
+        </div>
+      </section>
+
+      <!-- ================================================================
+           CHAPTER 5 — Photo Puzzle
+           A 3×3 swap puzzle built from config.puzzleImage. Tap two pieces,
+           or drag one onto another, to swap them — since swapping (unlike
+           sliding-tile puzzles) can reach any arrangement, every shuffle
+           is guaranteed solvable.
+      ================================================================= -->
+      <section class="stage story-section" data-story-section="puzzle" aria-hidden="true">
+        <div class="puzzle-content">
+          <p class="eyebrow" id="puzzle-eyebrow" tabindex="-1"></p>
+          <h2 class="font-display" id="puzzle-question"></h2>
+
+          <div class="puzzle-frame">
+            <div
+              class="puzzle-grid"
+              id="puzzle-grid"
+              role="group"
+              aria-label="Photo puzzle. Tap two pieces, or drag one onto another, to swap them."
+            ><!-- puzzle-slot buttons injected by script.js --></div>
+          </div>
+
+          <p class="font-script celebration-title hidden" id="puzzle-solved-text"></p>
+          <button id="puzzle-continue-btn" class="btn btn-glow hidden" type="button">Continue →</button>
+        </div>
+      </section>
+
+      <!-- ================================================================
+           CHAPTER 6 — Scratch Card
+      ================================================================= -->
+      <section class="stage story-section" data-story-section="scratch" aria-hidden="true">
+        <div class="scratch-content">
+          <p class="eyebrow" id="scratch-eyebrow" tabindex="-1"></p>
+
+          <div class="scratch-frame" id="scratch-frame">
+            <img id="scratch-photo" src="" alt="" data-fallback />
+            <canvas id="scratch-canvas" aria-hidden="true"></canvas>
+            <span class="scratch-hint" id="scratch-hint" aria-hidden="true"></span>
+          </div>
+
+          <button type="button" id="scratch-skip-btn" class="scratch-skip-link">
+            Prefer not to scratch? Tap to reveal →
+          </button>
+
+          <p class="font-script celebration-title hidden" id="scratch-message"></p>
+          <button id="scratch-continue-btn" class="btn btn-glow hidden" type="button">Continue →</button>
+        </div>
+      </section>
+
+      <!-- ================================================================
+           CHAPTER 7 — "How much do you mean to me?"
+           The first two buttons dodge away when tapped; only the third
+           one is ever reachable, on purpose.
+      ================================================================= -->
+      <section class="stage story-section" data-story-section="choose-one" aria-hidden="true">
+        <div class="choose-content">
+          <p class="eyebrow" id="choose-eyebrow" tabindex="-1"></p>
+          <h2 class="font-display" id="choose-question"></h2>
+
+          <div class="choose-playground" id="choose-playground">
+            <button type="button" class="btn choose-btn" id="choose-btn-a" data-sfx="click"></button>
+            <button type="button" class="btn choose-btn" id="choose-btn-b" data-sfx="click"></button>
+            <button type="button" class="btn btn-glow choose-btn" id="choose-btn-correct"></button>
+          </div>
+
+          <p class="font-script celebration-title hidden" id="choose-answer-text"></p>
+          <button id="choose-continue-btn" class="btn btn-glow hidden" type="button">Continue →</button>
+        </div>
+      </section>
+
+      <!-- ================================================================
+           CHAPTER 8 — Memory Timeline
+           Items fade/slide/scale into view (with a sparkle) as the user
+           scrolls, via SectionManager.initScrollReveal.
+      ================================================================= -->
+      <section class="stage story-section timeline-stage" data-story-section="timeline" aria-hidden="true">
+        <div class="timeline-content">
+          <p class="eyebrow" id="timeline-eyebrow" tabindex="-1"></p>
+          <h2 class="font-display" id="timeline-heading"></h2>
+
+          <ol class="timeline-list" id="timeline-list"><!-- items injected by script.js --></ol>
+
+          <button id="timeline-continue-btn" class="btn btn-glow" type="button">Continue →</button>
+        </div>
+      </section>
+
+      <!-- ================================================================
+           CHAPTER 9 — Birthday Letter
+           letterIntro fades in first; the letter itself then "types out"
+           gradually. The full text is always available to screen readers
+           immediately via the visually-hidden companion paragraph.
+      ================================================================= -->
+      <section class="stage story-section" data-story-section="letter" aria-hidden="true">
+        <div class="letter-content glass-card">
+          <p class="eyebrow anim-fade-in" id="letter-intro" tabindex="-1"></p>
+          <p class="letter-body font-display" id="letter-body" aria-hidden="true"></p>
+          <p class="visually-hidden" id="letter-body-full"></p>
+          <button id="letter-continue-btn" class="btn btn-glow hidden" type="button">Continue →</button>
+        </div>
+      </section>
+
+      <!-- ================================================================
+           CHAPTER 10 — Birthday Cake
+           A CSS-drawn cake with tappable candles. Blowing out the last
+           one triggers the mini-celebration described in the brief.
+      ================================================================= -->
+      <section class="stage story-section" data-story-section="cake" aria-hidden="true">
+        <div class="cake-content">
+          <p class="font-display" id="cake-prompt"></p>
+
+          <div class="cake-scene" id="cake-scene">
+            <div class="cake-dim-overlay" id="cake-dim-overlay" aria-hidden="true"></div>
+            <div class="cake-candles" id="cake-candles" role="group" aria-label="Candles — tap each one to blow it out">
+              <!-- candle buttons injected by script.js -->
+            </div>
+            <div class="cake" aria-hidden="true">
+              <div class="cake-tier cake-tier-top"></div>
+              <div class="cake-tier cake-tier-bottom"></div>
+              <div class="cake-plate"></div>
+            </div>
+          </div>
+
+          <p class="font-script celebration-title hidden" id="cake-success-text"></p>
+          <button id="cake-continue-btn" class="btn btn-glow hidden" type="button">Continue →</button>
+        </div>
+      </section>
+
+      <!-- ================================================================
+           CHAPTER 11 — Fireworks Celebration
+           Reuses the shared #particle-canvas via ParticleEngine.fireworksShow.
+      ================================================================= -->
+      <section class="stage story-section" data-story-section="fireworks" aria-hidden="true">
+        <div class="fireworks-content">
+          <h1 class="font-display fireworks-title" id="fireworks-title" tabindex="-1"></h1>
+          <button id="fireworks-continue-btn" class="btn btn-glow hidden" type="button">Continue →</button>
+        </div>
+      </section>
+
+      <!-- ================================================================
+           CHAPTER 12 — Secret Surprise
+           A quiet, mysterious button that reveals one more note + photo
+           in place, without navigating away.
+      ================================================================= -->
+      <section class="stage story-section" data-story-section="secret" aria-hidden="true">
+        <div class="secret-content">
+          <p class="eyebrow" id="secret-eyebrow" tabindex="-1"></p>
+          <button type="button" id="secret-button" class="btn btn-ghost btn-glow" data-sfx="click">
+            One Last Thing...
+          </button>
+
+          <div class="secret-reveal hidden" id="secret-reveal">
+            <p class="font-script celebration-title" id="secret-note"></p>
+            <img id="secret-photo" class="secret-photo" src="" alt="" data-fallback />
+            <button id="secret-continue-btn" class="btn btn-glow" type="button">Continue →</button>
+          </div>
+        </div>
+      </section>
+
+      <!-- ================================================================
+           CHAPTER 13 — Final Surprise
+           The cinematic closing screen. Replay fully reloads the page so
+           every chapter's internal state (timers, canvases, shuffles)
+           resets cleanly instead of trying to hand-reset each one.
+      ================================================================= -->
+      <section class="stage story-section" data-story-section="final" aria-hidden="true">
+        <div class="final-content">
+          <h1 class="font-display final-name" id="final-name" tabindex="-1"></h1>
+          <p class="final-subline" id="final-subline"></p>
+          <img id="final-photo" class="final-photo" src="" alt="" data-fallback />
+          <button id="replay-btn" class="btn btn-glow" type="button">Replay The Surprise 🔄</button>
+        </div>
+      </section>
+
+    </main>
+
+    <!-- Shared full-photo lightbox, used by the gallery (and reusable by
+         any later chapter that wants to zoom into an image). -->
+    <div id="lightbox" class="lightbox hidden" aria-hidden="true" role="dialog" aria-modal="true" aria-label="Photo viewer">
+      <button id="lightbox-close" class="icon-btn lightbox-close" type="button" aria-label="Close photo">✕</button>
+      <figure class="lightbox-figure">
+        <img id="lightbox-img" src="" alt="" />
+        <figcaption id="lightbox-caption"></figcaption>
+      </figure>
+    </div>
+
+    <!-- Daily calendar modal: opens whichever mini-reveal (blur/scratch/
+         puzzle/flip/pop) js/dailyReveal.js assigns to the tapped day. -->
+    <div id="daily-modal" class="daily-modal lightbox hidden" aria-hidden="true" role="dialog" aria-modal="true" aria-label="Daily memory">
+      <button id="daily-modal-close" class="icon-btn lightbox-close" type="button" aria-label="Close">✕</button>
+      <div class="daily-modal-inner">
+        <p class="eyebrow" id="daily-modal-day-label" tabindex="-1"></p>
+        <div class="daily-modal-stage" id="daily-modal-stage"><!-- reveal UI injected here --></div>
+        <p class="font-script celebration-title hidden" id="daily-modal-caption"></p>
+      </div>
+    </div>
+
+    <!-- Daily memories overlay: the full calendar grid, reachable at any
+         time via the floating 🗓️ button above OR the teaser button on
+         the Countdown chapter. Tapping a tile here opens #daily-modal on
+         top of it, so this stays open underneath for browsing more days. -->
+    <div id="daily-memories-overlay" class="daily-memories-overlay lightbox hidden" aria-hidden="true" role="dialog" aria-modal="true" aria-label="Daily memories">
+      <button id="daily-memories-close" class="icon-btn lightbox-close" type="button" aria-label="Close">✕</button>
+      <div class="daily-memories-inner">
+        <p class="eyebrow" id="daily-memories-eyebrow" tabindex="-1"></p>
+        <h3 class="font-display" id="daily-memories-heading"></h3>
+        <p class="daily-calendar-hint" id="daily-calendar-hint"></p>
+        <div class="daily-calendar-grid" id="daily-calendar-grid" role="group" aria-label="Daily memory calendar">
+          <!-- day tiles injected by js/dailyReveal.js -->
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Personal content — load first so every engine below can read it -->
+  <script src="config.js"></script>
+
+  <!-- Shared reusable engines -->
+  <script src="js/sectionManager.js"></script>
+  <script src="js/storyFlow.js"></script>
+  <script src="js/particles.js"></script>
+  <script src="js/soundManager.js"></script>
+  <script src="js/dailyReveal.js"></script>
+
+  <!-- App bootstrap -->
+  <script src="script.js"></script>
+</body>
+</html>
