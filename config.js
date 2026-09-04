@@ -22,7 +22,7 @@ const birthdayConfig = {
   name: "Shama Daniel",
 
   // When the countdown should hit zero. Format: "YYYY-MM-DDTHH:MM:SS"
-  birthdayDate: "2026-8-2T00:00:00",
+  birthdayDate: "2026-08-2T00:00:00",
 
   /* --------------------------------------------------------------------
      2. PHOTOS
